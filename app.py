@@ -1,53 +1,37 @@
-from flask import Flask
-from flask import request
-import redis
-import json
+import socket
+import sys
 
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Bind the socket to the port
+server_address = ('localhost', 5001)
+my_str = 'starting up on %s port %s' % server_address
+print(my_str)
 
-app = Flask(__name__)
+print('starting up on %s port %s' % server_address)
+sock.bind(server_address)
+# Listen for incoming connections
+sock.listen(1)
 
+while True:
+    # Wait for a connection
+    print ('waiting for a connection')
+    connection, client_address = sock.accept()
 
-@app.route('/setredis/', methods=['POST'])
-# http://127.0.0.1:5000/setredis?key=keyfrompython1&value=vlauefrompostman
-def setredis():
-    # key = request.args.get('key')
-    # value = request.args.get('value')
-    # r = redis.Redis(host='localhost', port=6379, db=0)
-    # r.set(key, value)
-    return "set done!"
+    try:
+        print ('connection from', client_address)
 
+        # Receive the data in small chunks and retransmit it
+        while True:
+            data = connection.recv(160)
+            print ('received "%s"' % data)
+            if data:
+                print ('sending data back to the client')
+                connection.sendall(data)
+            else:
+                print ('no more data from', client_address)
+                break
 
-@app.route('/getredis', methods=['GET'])
-# http://127.0.0.1:5000/getredis?key=keyfrompython1
-# @app.route('/getredis/<string:key>/', methods=['GET'])
-# http://127.0.0.1:5000/getredis/keyfrompython
-# def getredis(key):
-def getredis():
-    return "getredis demo"
-    # key = request.args.get('key')
-    # r = redis.Redis(host='localhost', port=6379, db=0)
-    # try:
-    #     value = r.get(key)
-    #     if value:
-    #         return value
-    #     else:
-    #         return 'no data for this key'
-    # except:
-    #     return None
-
-@app.route('/getallkeys', methods=['GET'])
-# http://127.0.0.1:5000/getallkeys
-def getallkeys():
-    return "getallkeys demo"
-    # r = redis.Redis(host='localhost', port=6379, db=0)
-    # retlist = [];
-    # for key in r.scan_iter():
-    #     retlist.append(key.decode("utf-8"))
-    # print(retlist)
-    # return json.dumps(retlist)
-
-
-
-if __name__ == '__main__':
-	app.run(port=8080)
-
+    finally:
+        # Clean up the connection
+        connection.close()
